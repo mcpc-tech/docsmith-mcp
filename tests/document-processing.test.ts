@@ -143,3 +143,88 @@ describe("PDF Document Processing", () => {
     expect(result.total_words).toBeGreaterThan(0);
   });
 });
+
+describe("Text File Processing", () => {
+  const txtFile = join(__dirname, "..", "examples", "sample_text.txt");
+  const csvFile = join(__dirname, "..", "examples", "sample_data.csv");
+
+  it("should read text file content", async () => {
+    const result = await runPythonFile("text_handler.py", {
+      args: ["read", txtFile],
+      filePaths: [txtFile],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.content).toBeDefined();
+    expect(result.total_lines).toBeGreaterThan(0);
+    expect(result.encoding).toBe("utf-8");
+  });
+
+  it("should read text file with pagination", async () => {
+    const result = await runPythonFile("text_handler.py", {
+      args: ["read", txtFile, "1", "3"],
+      filePaths: [txtFile],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.page).toBe(1);
+    expect(result.page_size).toBe(3);
+    expect(result.has_more).toBe(true);
+  });
+
+  it("should read CSV as structured data", async () => {
+    const result = await runPythonFile("text_handler.py", {
+      args: ["read", csvFile],
+      filePaths: [csvFile],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.headers).toBeDefined();
+    expect(result.headers).toEqual(["Name", "Age", "City"]);
+    expect(result.data).toBeDefined();
+    expect(Array.isArray(result.data)).toBe(true);
+    expect(result.data.length).toBe(5);
+    expect(result.data[0]).toHaveProperty("Name");
+    expect(result.data[0]).toHaveProperty("Age");
+    expect(result.data[0]).toHaveProperty("City");
+  });
+
+  it("should read CSV with pagination", async () => {
+    const result = await runPythonFile("text_handler.py", {
+      args: ["read", csvFile, "1", "2"],
+      filePaths: [csvFile],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.page).toBe(1);
+    expect(result.page_size).toBe(2);
+    expect(result.data.length).toBe(2);
+    expect(result.has_more).toBe(true);
+  });
+
+  it("should get text file info", async () => {
+    const result = await runPythonFile("text_handler.py", {
+      args: ["info", txtFile],
+      filePaths: [txtFile],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.file_size).toBeGreaterThan(0);
+    expect(result.line_count).toBeGreaterThan(0);
+    expect(result.file_type).toBe("txt");
+  });
+
+  it("should get CSV file info with headers", async () => {
+    const result = await runPythonFile("text_handler.py", {
+      args: ["info", csvFile],
+      filePaths: [csvFile],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.file_type).toBe("csv");
+    expect(result.headers).toBeDefined();
+    expect(result.headers).toEqual(["Name", "Age", "City"]);
+    expect(result.total_rows).toBe(5);
+    expect(result.total_cols).toBe(3);
+  });
+});

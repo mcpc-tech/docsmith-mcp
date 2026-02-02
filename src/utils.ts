@@ -7,11 +7,15 @@
  */
 export function detectFileType(
   filePath: string,
-): "excel" | "word" | "pdf" | null {
+): "excel" | "word" | "pdf" | "text" | null {
   const ext = filePath.toLowerCase().split(".").pop();
   if (ext === "xlsx" || ext === "xls") return "excel";
   if (ext === "docx") return "word";
   if (ext === "pdf") return "pdf";
+  if (
+    ext === "txt" || ext === "csv" || ext === "md" || ext === "json" ||
+    ext === "yaml" || ext === "yml"
+  ) return "text";
   return null;
 }
 
@@ -23,6 +27,7 @@ export function getPackages(fileType: string): Record<string, string> {
     excel: { openpyxl: "openpyxl" },
     word: { docx: "python-docx" }, // Map docx import to python-docx package
     pdf: { PyPDF2: "PyPDF2" },
+    text: {}, // No external packages needed for text files
   };
   return packages[fileType] || {};
 }

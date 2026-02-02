@@ -27,7 +27,7 @@ const ReadDocumentSchema = z.object({
 
 const WriteDocumentSchema = z.object({
   file_path: z.string().describe("Absolute path to save the document"),
-  format: z.enum(["excel", "word"]).describe("Document format"),
+  format: z.enum(["excel", "word", "text"]).describe("Document format"),
   data: z.any().describe("Document data structure"),
 });
 
@@ -55,7 +55,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "read_document",
         description:
-          "Read document content (Excel, Word, PDF). Supports raw full read or paginated mode.",
+          "Read document content (Excel, Word, PDF, TXT, CSV, Markdown, JSON, YAML). Supports raw full read or paginated mode.",
         inputSchema: {
           type: "object",
           properties: {
@@ -83,7 +83,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "write_document",
-        description: "Write document content (Excel, Word)",
+        description: "Write document content (Excel, Word, Text)",
         inputSchema: {
           type: "object",
           properties: {
@@ -93,7 +93,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             format: {
               type: "string",
-              enum: ["excel", "word"],
+              enum: ["excel", "word", "text"],
               description: "Document format",
             },
             data: { type: "object", description: "Document data structure" },
@@ -157,12 +157,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           scriptArgs.push(String(page));
           scriptArgs.push(String(pageSize));
         }
-      } else {
+      } else if (fileType === "pdf") {
         scriptName = "pdf_handler.py";
         scriptArgs = ["read", params.file_path];
         if (page) {
           scriptArgs.push(String(page));
           scriptArgs.push(String(Math.min(pageSize, 10))); // PDF pages are larger
+        }
+      } else {
+        // text files
+        scriptName = "text_handler.py";
+        scriptArgs = ["read", params.file_path];
+        if (page) {
+          scriptArgs.push(String(page));
+          scriptArgs.push(String(pageSize));
         }
       }
 
@@ -191,6 +199,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const tables = params.data.tables || null;
         scriptArgs = ["write", params.file_path, JSON.stringify(paragraphs)];
         if (tables) scriptArgs.push(JSON.stringify(tables));
+      } else if (params.format === "text") {
+        scriptName = "text_handler.py";
+        const content = typeof params.data === "string"
+          ? params.data
+          : JSON.stringify(params.data);
+        scriptArgs = ["write", params.file_path, content];
       } else {
         throw new Error(`Unsupported write format: ${params.format}`);
       }
@@ -220,8 +234,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         scriptName = "excel_handler.py";
       } else if (fileType === "word") {
         scriptName = "word_handler.py";
-      } else {
+      } else if (fileType === "pdf") {
         scriptName = "pdf_handler.py";
+      } else {
+        scriptName = "text_handler.py";
       }
 
       const result = await runPythonFile(scriptName, {

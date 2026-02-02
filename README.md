@@ -8,6 +8,8 @@ ease using Python.
 - **Excel**: Read/write `.xlsx` files with sheet support and pagination
 - **Word**: Read/write `.docx` files with paragraph and table support
 - **PDF**: Read `.pdf` files with text extraction and pagination
+- **Text Files**: Read/write `.txt`, `.csv`, `.md`, `.json`, `.yaml`, `.yml`
+  with pagination support
 - **Flexible Reading Modes**: Raw full read or paginated for large files
 - **Powered by Pyodide**: Runs in secure WebAssembly sandbox via code-runner-mcp
 
