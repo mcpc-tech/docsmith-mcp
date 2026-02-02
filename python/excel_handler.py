@@ -35,12 +35,14 @@ def read_excel(file_path: str, sheet_name: str = None, page: int = None, page_si
     for row in ws.iter_rows(values_only=True):
         data.append(row)
     
+    total_rows_data = len(data)
+    
     # Handle pagination
     if page is not None:
+        total_pages = (total_rows_data + page_size - 1) // page_size if total_rows_data > 0 else 1
         start = (page - 1) * page_size
         end = start + page_size
         data = data[start:end]
-        total_pages = (len(data) + page_size - 1) // page_size if data else 1
     else:
         total_pages = 1
     
@@ -94,8 +96,8 @@ if __name__ == "__main__":
     file_path = sys.argv[2]
     
     if command == "read":
-        sheet = sys.argv[3] if len(sys.argv) > 3 else None
-        page = int(sys.argv[4]) if len(sys.argv) > 4 else None
+        sheet = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else None
+        page = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else None
         page_size = int(sys.argv[5]) if len(sys.argv) > 5 else 100
         result = read_excel(file_path, sheet, page, page_size)
     elif command == "info":

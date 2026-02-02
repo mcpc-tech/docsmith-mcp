@@ -459,7 +459,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (fileType === "excel") {
         scriptName = "excel_handler.py";
         scriptArgs = ["read", params.file_path];
-        if (params.sheet_name) scriptArgs.push(params.sheet_name);
+        // Always push sheet_name (even if undefined) to maintain arg positions
+        scriptArgs.push(params.sheet_name || "");
         if (page) {
           scriptArgs.push(String(page));
           scriptArgs.push(String(pageSize));
