@@ -11,8 +11,22 @@ def read_excel(file_path: str, sheet_name: str = None, page: int = None, page_si
     
     wb = openpyxl.load_workbook(file_path, data_only=True)
     
+    # Handle sheet_name selection
     if sheet_name is None:
+        # Use first sheet if not specified
         sheet_name = wb.sheetnames[0]
+    elif sheet_name not in wb.sheetnames:
+        # If sheet_name not found, try to interpret as 1-based index
+        try:
+            sheet_index = int(sheet_name) - 1
+            if 0 <= sheet_index < len(wb.sheetnames):
+                sheet_name = wb.sheetnames[sheet_index]
+            else:
+                # Index out of range, use first sheet
+                sheet_name = wb.sheetnames[0]
+        except (ValueError, IndexError):
+            # Not a valid number or other error, use first sheet
+            sheet_name = wb.sheetnames[0]
     
     ws = wb[sheet_name]
     
