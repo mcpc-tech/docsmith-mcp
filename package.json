@@ -1,6 +1,6 @@
 {
   "name": "docsmith-mcp",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "Python-powered document processing MCP for Excel, Word, PDF",
   "type": "module",
   "main": "./dist/index.js",
