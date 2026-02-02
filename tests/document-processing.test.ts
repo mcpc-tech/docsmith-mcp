@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { runPythonFile } from '../src/code-runner.js'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 /**
  * Document processing tests using real files from examples/ directory
@@ -7,13 +12,15 @@ import { runPythonFile } from '../src/code-runner.js'
  */
 
 describe('Excel Document Processing', () => {
-    const excelFile = '/data/examples/sample_sales_data.xlsx'
+    const excelFile = join(__dirname, '..', 'examples', 'sample_sales_data.xlsx')
 
     it('should read Excel file content', async () => {
         const result = await runPythonFile(
             'excel_handler.py',
             ['read', excelFile],
-            { openpyxl: 'openpyxl' }
+            { openpyxl: 'openpyxl' },
+            'python',
+            [excelFile]
         )
 
         expect(result.sheet_name).toBe('Sales Report')
@@ -28,7 +35,9 @@ describe('Excel Document Processing', () => {
         const result = await runPythonFile(
             'excel_handler.py',
             ['read', excelFile, 'Sales Report', '1', '3'],
-            { openpyxl: 'openpyxl' }
+            { openpyxl: 'openpyxl' },
+            'python',
+            [excelFile]
         )
 
         expect(result.current_page).toBe(1)
@@ -40,7 +49,9 @@ describe('Excel Document Processing', () => {
         const result = await runPythonFile(
             'excel_handler.py',
             ['info', excelFile],
-            { openpyxl: 'openpyxl' }
+            { openpyxl: 'openpyxl' },
+            'python',
+            [excelFile]
         )
 
         expect(result.sheets).toBeDefined()
@@ -53,13 +64,15 @@ describe('Excel Document Processing', () => {
 })
 
 describe('Word Document Processing', () => {
-    const wordFile = '/data/examples/sample_report.docx'
+    const wordFile = join(__dirname, '..', 'examples', 'sample_report.docx')
 
     it('should read Word document content', async () => {
         const result = await runPythonFile(
             'word_handler.py',
             ['read', wordFile],
-            { docx: 'python-docx' }  // Map 'docx' import to 'python-docx' package
+            { docx: 'python-docx' },
+            'python',
+            [wordFile]
         )
 
         expect(result.paragraphs).toBeDefined()
@@ -75,7 +88,9 @@ describe('Word Document Processing', () => {
         const result = await runPythonFile(
             'word_handler.py',
             ['read', wordFile, '1', '5'],
-            { docx: 'python-docx' }
+            { docx: 'python-docx' },
+            'python',
+            [wordFile]
         )
 
         expect(result.current_page).toBe(1)
@@ -87,7 +102,9 @@ describe('Word Document Processing', () => {
         const result = await runPythonFile(
             'word_handler.py',
             ['info', wordFile],
-            { docx: 'python-docx' }
+            { docx: 'python-docx' },
+            'python',
+            [wordFile]
         )
 
         expect(result.paragraphs).toBeGreaterThan(0)
@@ -97,13 +114,15 @@ describe('Word Document Processing', () => {
 })
 
 describe('PDF Document Processing', () => {
-    const pdfFile = '/data/examples/sample_document.pdf'
+    const pdfFile = join(__dirname, '..', 'examples', 'sample_document.pdf')
 
     it('should read PDF content', async () => {
         const result = await runPythonFile(
             'pdf_handler.py',
             ['read', pdfFile],
-            { PyPDF2: 'PyPDF2' }
+            { PyPDF2: 'PyPDF2' },
+            'python',
+            [pdfFile]
         )
 
         expect(result.total_pages).toBeGreaterThan(0)
@@ -118,7 +137,9 @@ describe('PDF Document Processing', () => {
         const result = await runPythonFile(
             'pdf_handler.py',
             ['read', pdfFile, '1', '1'],
-            { PyPDF2: 'PyPDF2' }
+            { PyPDF2: 'PyPDF2' },
+            'python',
+            [pdfFile]
         )
 
         expect(result.current_page_group).toBe(1)
@@ -130,7 +151,9 @@ describe('PDF Document Processing', () => {
         const result = await runPythonFile(
             'pdf_handler.py',
             ['info', pdfFile],
-            { PyPDF2: 'PyPDF2' }
+            { PyPDF2: 'PyPDF2' },
+            'python',
+            [pdfFile]
         )
 
         expect(result.pages).toBeGreaterThan(0)

@@ -137,7 +137,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
 
-      const result = await runPythonFile(scriptName, scriptArgs, getPackages(fileType));
+      const result = await runPythonFile(
+        scriptName, 
+        scriptArgs, 
+        getPackages(fileType),
+        "python",
+        [params.file_path]
+      );
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -162,7 +168,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unsupported write format: ${params.format}`);
       }
 
-      const result = await runPythonFile(scriptName, scriptArgs, getPackages(params.format));
+      const result = await runPythonFile(
+        scriptName, 
+        scriptArgs, 
+        getPackages(params.format),
+        "python",
+        [params.file_path]
+      );
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -187,7 +199,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         scriptName = "pdf_handler.py";
       }
 
-      const result = await runPythonFile(scriptName, scriptArgs, getPackages(fileType));
+      const result = await runPythonFile(
+        scriptName, 
+        scriptArgs, 
+        getPackages(fileType),
+        "python",
+        [params.file_path]
+      );
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
