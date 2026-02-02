@@ -5,7 +5,7 @@ import { join } from "path";
 export default defineConfig({
   entry: ["./src/index.ts"],
   outDir: "dist",
-  format: "esm",
+  format: ["esm", "cjs"],
   clean: true,
   dts: true,
   sourcemap: true,
