@@ -15,13 +15,11 @@ describe('Excel Document Processing', () => {
     const excelFile = join(__dirname, '..', 'examples', 'sample_sales_data.xlsx')
 
     it('should read Excel file content', async () => {
-        const result = await runPythonFile(
-            'excel_handler.py',
-            ['read', excelFile],
-            { openpyxl: 'openpyxl' },
-            'python',
-            [excelFile]
-        )
+        const result = await runPythonFile('excel_handler.py', {
+            args: ['read', excelFile],
+            packages: { openpyxl: 'openpyxl' },
+            filePaths: [excelFile]
+        })
 
         expect(result.sheet_name).toBe('Sales Report')
         expect(result.sheets).toContain('Sales Report')
@@ -32,13 +30,11 @@ describe('Excel Document Processing', () => {
     })
 
     it('should read Excel file with pagination', async () => {
-        const result = await runPythonFile(
-            'excel_handler.py',
-            ['read', excelFile, 'Sales Report', '1', '3'],
-            { openpyxl: 'openpyxl' },
-            'python',
-            [excelFile]
-        )
+        const result = await runPythonFile('excel_handler.py', {
+            args: ['read', excelFile, 'Sales Report', '1', '3'],
+            packages: { openpyxl: 'openpyxl' },
+            filePaths: [excelFile]
+        })
 
         expect(result.current_page).toBe(1)
         expect(result.page_size).toBe(3)
@@ -46,13 +42,11 @@ describe('Excel Document Processing', () => {
     })
 
     it('should get Excel file info', async () => {
-        const result = await runPythonFile(
-            'excel_handler.py',
-            ['info', excelFile],
-            { openpyxl: 'openpyxl' },
-            'python',
-            [excelFile]
-        )
+        const result = await runPythonFile('excel_handler.py', {
+            args: ['info', excelFile],
+            packages: { openpyxl: 'openpyxl' },
+            filePaths: [excelFile]
+        })
 
         expect(result.sheets).toBeDefined()
         expect(Array.isArray(result.sheets)).toBe(true)
@@ -67,13 +61,11 @@ describe('Word Document Processing', () => {
     const wordFile = join(__dirname, '..', 'examples', 'sample_report.docx')
 
     it('should read Word document content', async () => {
-        const result = await runPythonFile(
-            'word_handler.py',
-            ['read', wordFile],
-            { docx: 'python-docx' },
-            'python',
-            [wordFile]
-        )
+        const result = await runPythonFile('word_handler.py', {
+            args: ['read', wordFile],
+            packages: { docx: 'python-docx' },
+            filePaths: [wordFile]
+        })
 
         expect(result.paragraphs).toBeDefined()
         expect(Array.isArray(result.paragraphs)).toBe(true)
@@ -85,13 +77,11 @@ describe('Word Document Processing', () => {
     })
 
     it('should read Word document with pagination', async () => {
-        const result = await runPythonFile(
-            'word_handler.py',
-            ['read', wordFile, '1', '5'],
-            { docx: 'python-docx' },
-            'python',
-            [wordFile]
-        )
+        const result = await runPythonFile('word_handler.py', {
+            args: ['read', wordFile, '1', '5'],
+            packages: { docx: 'python-docx' },
+            filePaths: [wordFile]
+        })
 
         expect(result.current_page).toBe(1)
         expect(result.page_size).toBe(5)
@@ -99,13 +89,11 @@ describe('Word Document Processing', () => {
     })
 
     it('should get Word document info', async () => {
-        const result = await runPythonFile(
-            'word_handler.py',
-            ['info', wordFile],
-            { docx: 'python-docx' },
-            'python',
-            [wordFile]
-        )
+        const result = await runPythonFile('word_handler.py', {
+            args: ['info', wordFile],
+            packages: { docx: 'python-docx' },
+            filePaths: [wordFile]
+        })
 
         expect(result.paragraphs).toBeGreaterThan(0)
         expect(result.tables).toBeGreaterThan(0)
@@ -117,13 +105,11 @@ describe('PDF Document Processing', () => {
     const pdfFile = join(__dirname, '..', 'examples', 'sample_document.pdf')
 
     it('should read PDF content', async () => {
-        const result = await runPythonFile(
-            'pdf_handler.py',
-            ['read', pdfFile],
-            { PyPDF2: 'PyPDF2' },
-            'python',
-            [pdfFile]
-        )
+        const result = await runPythonFile('pdf_handler.py', {
+            args: ['read', pdfFile],
+            packages: { PyPDF2: 'PyPDF2' },
+            filePaths: [pdfFile]
+        })
 
         expect(result.total_pages).toBeGreaterThan(0)
         expect(result.content).toBeDefined()
@@ -134,13 +120,11 @@ describe('PDF Document Processing', () => {
     })
 
     it('should read PDF with pagination', async () => {
-        const result = await runPythonFile(
-            'pdf_handler.py',
-            ['read', pdfFile, '1', '1'],
-            { PyPDF2: 'PyPDF2' },
-            'python',
-            [pdfFile]
-        )
+        const result = await runPythonFile('pdf_handler.py', {
+            args: ['read', pdfFile, '1', '1'],
+            packages: { PyPDF2: 'PyPDF2' },
+            filePaths: [pdfFile]
+        })
 
         expect(result.current_page_group).toBe(1)
         expect(result.page_size).toBe(1)
@@ -148,13 +132,11 @@ describe('PDF Document Processing', () => {
     })
 
     it('should get PDF info', async () => {
-        const result = await runPythonFile(
-            'pdf_handler.py',
-            ['info', pdfFile],
-            { PyPDF2: 'PyPDF2' },
-            'python',
-            [pdfFile]
-        )
+        const result = await runPythonFile('pdf_handler.py', {
+            args: ['info', pdfFile],
+            packages: { PyPDF2: 'PyPDF2' },
+            filePaths: [pdfFile]
+        })
 
         expect(result.pages).toBeGreaterThan(0)
         expect(result.file_size).toBeGreaterThan(0)

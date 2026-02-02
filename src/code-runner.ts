@@ -4,10 +4,24 @@
 import { runPy, type RunPyOptions } from "@mcpc/code-runner-mcp";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
-import { dirname, join, resolve, sep } from "path";
+import { dirname, join, resolve } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+/**
+ * Options for running Python script files
+ */
+export interface RunPythonFileOptions {
+  /** Command line arguments to pass to the script */
+  args?: string[];
+  /** Package name mappings (import_name -> pypi_name) */
+  packages?: Record<string, string>;
+  /** Base directory for the script (default: "python") */
+  baseDir?: string;
+  /** User file paths that need to be accessible (for file system mounting) */
+  filePaths?: string[];
+}
 
 /**
  * Convert absolute file path to Pyodide virtual path
@@ -31,19 +45,20 @@ function getFileSystemMapping(filePath: string): { mountRoot: string; virtualPat
  * Run a Python script file using code-runner-mcp
  *
  * @param scriptPath - Path to the Python script (relative to baseDir)
- * @param args - Command line arguments to pass to the script
- * @param packages - Package name mappings (import_name -> pypi_name)
- * @param baseDir - Base directory for the script (default: "python")
- * @param filePaths - User file paths that need to be accessible (for mounting)
+ * @param options - Execution options
  * @returns The execution result
  */
 export async function runPythonFile(
   scriptPath: string,
-  args: string[] = [],
-  packages: Record<string, string> = {},
-  baseDir: string = "python",
-  filePaths: string[] = []
+  options: RunPythonFileOptions = {}
 ): Promise<any> {
+  const {
+    args = [],
+    packages = {},
+    baseDir = "python",
+    filePaths = []
+  } = options;
+
   // Read the Python script
   const fullPath = join(__dirname, "..", baseDir, scriptPath);
   const scriptContent = readFileSync(fullPath, "utf-8");
@@ -69,12 +84,12 @@ ${scriptContent}
 
   // Execute via runPy with options
   // Mount point is the same as the mount root (Pyodide will see host paths directly)
-  const options: RunPyOptions = { 
+  const runPyOptions: RunPyOptions = { 
     packages, 
     nodeFSMountPoint: mountRoot,
     nodeFSRoot: mountRoot 
   };
-  const stream = await runPy(wrapperCode, options);
+  const stream = await runPy(wrapperCode, runPyOptions);
 
   // Read the stream output
   const reader = stream.getReader();
