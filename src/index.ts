@@ -387,7 +387,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         filePaths: [params.file_path],
       });
       return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        content: [{ 
+          type: "text", 
+          text: JSON.stringify(result, null, 2) 
+        }],
+        _meta: result,
       };
     }
 
@@ -422,7 +426,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         filePaths: [params.file_path],
       });
       return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        content: [{ 
+          type: "text", 
+          text: JSON.stringify(result, null, 2) 
+        }],
+        _meta: result,
       };
     }
 
@@ -453,7 +461,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         filePaths: [params.file_path],
       });
       return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        content: [{ 
+          type: "text", 
+          text: JSON.stringify(result, null, 2) 
+        }],
+        _meta: result,
       };
     }
 
