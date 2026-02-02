@@ -62,6 +62,8 @@ export async function runPythonFile(
   } = options;
 
   // Read the Python script
+  // Python files are in the python/ directory at project root
+  // From dist/index.js, go up one level to reach python/
   const fullPath = join(__dirname, "..", baseDir, scriptPath);
   const scriptContent = readFileSync(fullPath, "utf-8");
 
@@ -78,7 +80,8 @@ ${scriptContent}
 `;
 
   // Determine mount root from the first file path
-  let mountRoot = join(__dirname, ".."); // Default: project root
+  // Default: parent directory of dist/ (project root when running from dist/index.js)
+  let mountRoot = join(__dirname, "..");
   if (filePaths.length > 0) {
     const mapping = getFileSystemMapping(filePaths[0]);
     mountRoot = mapping.mountRoot;

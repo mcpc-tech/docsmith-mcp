@@ -21,6 +21,11 @@
   "bin": {
     "docsmith-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "python",
+    "scripts"
+  ],
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",

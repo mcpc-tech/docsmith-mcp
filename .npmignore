@@ -1,0 +1,29 @@
+# Source files (ship dist/ and python/)
+src/
+
+# Tests
+tests/
+*.test.ts
+*.spec.ts
+vitest.config.ts
+
+# Examples (for local development only)
+examples/
+
+# Build configs
+tsconfig.json
+tsdown.config.ts
+
+# Development
+.DS_Store
+*.log
+node_modules/
+
+# Git
+.git
+.gitignore
+.github/
+
+# IDE
+.vscode/
+.idea/
