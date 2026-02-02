@@ -9,6 +9,7 @@
     "dev": "tsdown --watch",
     "prepare": "pnpm build",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:ui": "vitest --ui"
   },
   "keywords": [
