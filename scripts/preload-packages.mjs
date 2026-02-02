@@ -10,6 +10,7 @@ import { runPy } from "@mcpc-tech/code-runner-mcp";
 const PACKAGES = [
   "openpyxl",
   "python-docx",
+  "python-pptx",
   "PyPDF2",
 ];
 
@@ -39,6 +40,7 @@ asyncio.run(main())
       packages: {
         openpyxl: "openpyxl",
         "python-docx": "python-docx",
+        "python-pptx": "python-pptx",
         PyPDF2: "PyPDF2",
       },
     });

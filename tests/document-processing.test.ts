@@ -144,6 +144,68 @@ describe("PDF Document Processing", () => {
   });
 });
 
+describe("PowerPoint Document Processing", () => {
+  const pptxFile = join(
+    __dirname,
+    "..",
+    "examples",
+    "sample_presentation.pptx",
+  );
+
+  it("should read PowerPoint presentation content", async () => {
+    const result = await runPythonFile("pptx_handler.py", {
+      args: ["read", pptxFile],
+      packages: { pptx: "python-pptx" },
+      filePaths: [pptxFile],
+    });
+
+    expect(result.total_slides).toBe(3);
+    expect(result.slides).toBeDefined();
+    expect(Array.isArray(result.slides)).toBe(true);
+    expect(result.slides.length).toBe(3);
+
+    // Check first slide structure
+    expect(result.slides[0].slide_number).toBe(1);
+    expect(result.slides[0].title).toBeDefined();
+    expect(result.slides[0].content).toBeDefined();
+    expect(Array.isArray(result.slides[0].content)).toBe(true);
+
+    // Check that slides contain expected content
+    const allContent = result.slides.flatMap((s) =>
+      [s.title, ...s.content].filter(Boolean)
+    );
+    expect(
+      allContent.some((c) =>
+        typeof c === "string" && c.includes("Sample Presentation")
+      ),
+    ).toBe(true);
+  });
+
+  it("should read PowerPoint with pagination", async () => {
+    const result = await runPythonFile("pptx_handler.py", {
+      args: ["read", pptxFile, "1", "2"],
+      packages: { pptx: "python-pptx" },
+      filePaths: [pptxFile],
+    });
+
+    expect(result.current_page).toBe(1);
+    expect(result.page_size).toBe(2);
+    expect(result.slides.length).toBe(2);
+    expect(result.total_slides).toBe(3);
+  });
+
+  it("should get PowerPoint presentation info", async () => {
+    const result = await runPythonFile("pptx_handler.py", {
+      args: ["info", pptxFile],
+      packages: { pptx: "python-pptx" },
+      filePaths: [pptxFile],
+    });
+
+    expect(result.slides).toBe(3);
+    expect(result.file_size).toBeGreaterThan(0);
+  });
+});
+
 describe("Text File Processing", () => {
   const txtFile = join(__dirname, "..", "examples", "sample_text.txt");
   const csvFile = join(__dirname, "..", "examples", "sample_data.csv");

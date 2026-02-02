@@ -13,6 +13,10 @@ import { detectFileType, getConfig, getPackages } from "./utils.js";
 // Tool schemas
 const ReadDocumentSchema = z.object({
   file_path: z.string().describe("Absolute path to the document file"),
+  file_type: z.enum(["excel", "word", "pptx", "pdf", "text"]).optional()
+    .describe(
+      "Override file type detection. Use this to explicitly specify the format instead of relying on file extension",
+    ),
   mode: z.enum(["raw", "paginated"]).optional().describe(
     "Read mode: 'raw' for full content, 'paginated' for chunked reading",
   ),
@@ -27,12 +31,18 @@ const ReadDocumentSchema = z.object({
 
 const WriteDocumentSchema = z.object({
   file_path: z.string().describe("Absolute path to save the document"),
-  format: z.enum(["excel", "word", "text"]).describe("Document format"),
+  format: z.enum(["excel", "word", "pptx", "text"]).describe(
+    "Document format",
+  ),
   data: z.any().describe("Document data structure"),
 });
 
 const GetDocumentInfoSchema = z.object({
   file_path: z.string().describe("Absolute path to the document file"),
+  file_type: z.enum(["excel", "word", "pptx", "pdf", "text"]).optional()
+    .describe(
+      "Override file type detection. Use this to explicitly specify the format instead of relying on file extension",
+    ),
 });
 
 // Server setup
@@ -239,13 +249,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "read_document",
         description:
-          "Read document content (Excel, Word, PDF, TXT, CSV, Markdown, JSON, YAML). Supports raw full read or paginated mode.",
+          "Read document content (Excel, Word, PowerPoint, PDF, TXT, CSV, Markdown, JSON, YAML). Supports raw full read or paginated mode.",
         inputSchema: {
           type: "object",
           properties: {
             file_path: {
               type: "string",
               description: "Absolute path to the document file",
+            },
+            file_type: {
+              type: "string",
+              enum: ["excel", "word", "pptx", "pdf", "text"],
+              description:
+                "Override file type detection (optional). Specify format explicitly instead of relying on extension",
             },
             mode: {
               type: "string",
@@ -288,6 +304,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             total_paragraphs: { type: "number" },
             total_tables: { type: "number" },
 
+            // PowerPoint-specific
+            total_slides: { type: "number" },
+            slides: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  slide_number: { type: "number" },
+                  title: { type: "string" },
+                  content: { type: "array" },
+                  notes: { type: "string" },
+                },
+              },
+            },
+
             // PDF-specific
             current_page_group: { type: ["number", "null"] },
             total_page_groups: { type: "number" },
@@ -310,7 +341,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "write_document",
-        description: "Write document content (Excel, Word, Text)",
+        description: "Write document content (Excel, Word, PowerPoint, Text)",
         inputSchema: {
           type: "object",
           properties: {
@@ -320,7 +351,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             format: {
               type: "string",
-              enum: ["excel", "word", "text"],
+              enum: ["excel", "word", "pptx", "text"],
               description: "Document format",
             },
             data: {
@@ -335,13 +366,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "get_document_info",
         description:
-          "Get document metadata (page count, sheet count, file size, etc.)",
+          "Get document metadata (page count, sheet count, slide count, file size, etc.)",
         inputSchema: {
           type: "object",
           properties: {
             file_path: {
               type: "string",
               description: "Absolute path to the document file",
+            },
+            file_type: {
+              type: "string",
+              enum: ["excel", "word", "pptx", "pdf", "text"],
+              description:
+                "Override file type detection (optional). Specify format explicitly instead of relying on extension",
             },
           },
           required: ["file_path"],
@@ -370,6 +407,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             // Word-specific
             paragraphs: { type: "number" },
             tables: { type: "number" },
+
+            // PowerPoint-specific
+            slides: { type: "number" },
 
             // PDF-specific
             pages: { type: "number" },
@@ -400,7 +440,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     if (name === "read_document") {
       const params = ReadDocumentSchema.parse(args);
-      const fileType = detectFileType(params.file_path);
+      // Use explicit file_type if provided, otherwise detect from extension
+      const fileType = params.file_type || detectFileType(params.file_path);
 
       if (!fileType) {
         throw new Error(`Unsupported file type: ${params.file_path}`);
@@ -425,6 +466,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       } else if (fileType === "word") {
         scriptName = "word_handler.py";
+        scriptArgs = ["read", params.file_path];
+        if (page) {
+          scriptArgs.push(String(page));
+          scriptArgs.push(String(pageSize));
+        }
+      } else if (fileType === "pptx") {
+        scriptName = "pptx_handler.py";
         scriptArgs = ["read", params.file_path];
         if (page) {
           scriptArgs.push(String(page));
@@ -476,6 +524,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const tables = params.data.tables || null;
         scriptArgs = ["write", params.file_path, JSON.stringify(paragraphs)];
         if (tables) scriptArgs.push(JSON.stringify(tables));
+      } else if (params.format === "pptx") {
+        scriptName = "pptx_handler.py";
+        const slides = params.data.slides || params.data || [];
+        scriptArgs = ["write", params.file_path, JSON.stringify(slides)];
       } else if (params.format === "text") {
         scriptName = "text_handler.py";
         const content = typeof params.data === "string"
@@ -502,7 +554,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "get_document_info") {
       const params = GetDocumentInfoSchema.parse(args);
-      const fileType = detectFileType(params.file_path);
+      // Use explicit file_type if provided, otherwise detect from extension
+      const fileType = params.file_type || detectFileType(params.file_path);
 
       if (!fileType) {
         throw new Error(`Unsupported file type: ${params.file_path}`);
@@ -515,6 +568,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         scriptName = "excel_handler.py";
       } else if (fileType === "word") {
         scriptName = "word_handler.py";
+      } else if (fileType === "pptx") {
+        scriptName = "pptx_handler.py";
       } else if (fileType === "pdf") {
         scriptName = "pdf_handler.py";
       } else {
