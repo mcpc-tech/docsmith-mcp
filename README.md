@@ -1,6 +1,7 @@
 # Docsmith MCP
 
-Python-powered document processing MCP — Process Excel, Word, PDF documents with ease using Python.
+Python-powered document processing MCP — Process Excel, Word, PDF documents with
+ease using Python.
 
 ## Features
 
@@ -39,11 +40,11 @@ Add to your MCP client configuration:
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable            | Description               | Default |
+| ------------------- | ------------------------- | ------- |
 | `DOC_RAW_FULL_READ` | Enable full raw read mode | `false` |
-| `DOC_PAGE_SIZE` | Default items per page | `100` |
-| `DOC_MAX_FILE_SIZE` | Max file size in MB | `50` |
+| `DOC_PAGE_SIZE`     | Default items per page    | `100`   |
+| `DOC_MAX_FILE_SIZE` | Max file size in MB       | `50`    |
 
 ## Tools
 
@@ -97,7 +98,9 @@ docsmith-mcp/
 └── dist/               # Built output
 ```
 
-Python scripts are executed via [code-runner-mcp](https://github.com/mcpc-tech/code-runner-mcp) in a Pyodide WebAssembly environment.
+Python scripts are executed via
+[code-runner-mcp](https://github.com/mcpc-tech/code-runner-mcp) in a Pyodide
+WebAssembly environment.
 
 ## License
 

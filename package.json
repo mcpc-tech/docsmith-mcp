@@ -1,6 +1,6 @@
 {
   "name": "docsmith-mcp",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Python-powered document processing MCP for Excel, Word, PDF",
   "type": "module",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@mcpc/code-runner-mcp": "npm:@jsr/mcpc__code-runner-mcp",
+    "@mcpc-tech/code-runner-mcp": "0.1.8",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "zod": "3"
   },
