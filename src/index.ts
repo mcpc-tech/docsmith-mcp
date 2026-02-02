@@ -95,7 +95,10 @@ const WordReadOutputSchema = {
     },
     tables: {
       type: "array",
-      items: { type: "array", items: { type: "array", items: { type: "string" } } },
+      items: {
+        type: "array",
+        items: { type: "array", items: { type: "string" } },
+      },
       description: "Tables data",
     },
     total_paragraphs: { type: "number", description: "Total paragraph count" },
@@ -263,7 +266,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
         outputSchema: {
           type: "object",
-          description: "Returns different structures based on file type: Excel (sheet data), Word (paragraphs/tables), PDF (page content), Text (plain text), CSV (structured rows), JSON (parsed object)",
+          description:
+            "Returns different structures based on file type: Excel (sheet data), Word (paragraphs/tables), PDF (page content), Text (plain text), CSV (structured rows), JSON (parsed object)",
           oneOf: [
             ExcelReadOutputSchema,
             WordReadOutputSchema,
@@ -387,11 +391,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         filePaths: [params.file_path],
       });
       return {
-        content: [{ 
-          type: "text", 
-          text: JSON.stringify(result, null, 2) 
+        content: [{
+          type: "text",
+          text: JSON.stringify(result, null, 2),
         }],
-        _meta: result,
+        structuredContent: result,
       };
     }
 
@@ -426,11 +430,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         filePaths: [params.file_path],
       });
       return {
-        content: [{ 
-          type: "text", 
-          text: JSON.stringify(result, null, 2) 
+        content: [{
+          type: "text",
+          text: JSON.stringify(result, null, 2),
         }],
-        _meta: result,
+        structuredContent: result,
       };
     }
 
@@ -461,11 +465,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         filePaths: [params.file_path],
       });
       return {
-        content: [{ 
-          type: "text", 
-          text: JSON.stringify(result, null, 2) 
+        content: [{
+          type: "text",
+          text: JSON.stringify(result, null, 2),
         }],
-        _meta: result,
+        structuredContent: result,
       };
     }
 
