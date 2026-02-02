@@ -8,10 +8,10 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "prepare": "pnpm build",
+    "postinstall": "node --experimental-wasm-stack-switching scripts/preload-packages.mjs || true",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui",
-    "download:wheels": "node scripts/download-wheels.mjs"
+    "test:ui": "vitest --ui"
   },
   "keywords": [
     "mcp",
