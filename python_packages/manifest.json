@@ -1,0 +1,6 @@
+{
+  "openpyxl": "openpyxl-3.1.5-py2.py3-none-any.whl",
+  "python-docx": "python_docx-1.2.0-py3-none-any.whl",
+  "PyPDF2": "pypdf2-3.0.1-py3-none-any.whl",
+  "et_xmlfile": "et_xmlfile-2.0.0-py3-none-any.whl"
+}

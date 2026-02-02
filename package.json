@@ -10,7 +10,8 @@
     "prepare": "pnpm build",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "download:wheels": "node scripts/download-wheels.mjs"
   },
   "keywords": [
     "mcp",

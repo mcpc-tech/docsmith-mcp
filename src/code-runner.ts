@@ -2,7 +2,7 @@
  * Code runner client - uses @mcpc/code-runner-mcp npm package
  */
 import { runPy, type RunPyOptions } from "@mcpc/code-runner-mcp";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, resolve } from "path";
 
@@ -21,6 +21,34 @@ export interface RunPythonFileOptions {
   baseDir?: string;
   /** User file paths that need to be accessible (for file system mounting) */
   filePaths?: string[];
+}
+
+/**
+ * Check if pre-downloaded wheels exist and get their paths
+ */
+function getLocalWheels(): Record<string, string> {
+  const wheelsDir = join(__dirname, "..", "python_packages");
+  const manifestPath = join(wheelsDir, "manifest.json");
+  
+  if (!existsSync(manifestPath)) {
+    return {};
+  }
+  
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    const wheels: Record<string, string> = {};
+    
+    for (const [packageName, fileName] of Object.entries(manifest)) {
+      const wheelPath = join(wheelsDir, fileName as string);
+      if (existsSync(wheelPath)) {
+        wheels[packageName] = wheelPath;
+      }
+    }
+    
+    return wheels;
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -63,10 +91,37 @@ export async function runPythonFile(
   const fullPath = join(__dirname, "..", baseDir, scriptPath);
   const scriptContent = readFileSync(fullPath, "utf-8");
 
-  // Build wrapper code that sets sys.argv and executes the script
+  // Check for local wheels
+  const localWheels = getLocalWheels();
+  const hasLocalWheels = Object.keys(localWheels).length > 0;
+
+  // Build wrapper code that installs local wheels first, then executes the script
+  const wheelInstallCode = hasLocalWheels ? `
+# Install pre-downloaded wheels if available
+import micropip
+import asyncio
+
+local_wheels = ${JSON.stringify(localWheels)}
+packages_to_install = []
+
+for pkg_name, wheel_path in local_wheels.items():
+    try:
+        await micropip.install(wheel_path)
+        print(f"[py] Installed {pkg_name} from local wheel")
+    except Exception as e:
+        print(f"[py] Failed to install {pkg_name} from local wheel: {e}")
+        packages_to_install.append(pkg_name)
+
+# Install remaining packages from PyPI if needed
+if packages_to_install:
+    await micropip.install(packages_to_install)
+` : '';
+
   const wrapperCode = `
 import sys
 import json
+
+${wheelInstallCode}
 
 # Set command line arguments
 sys.argv = ['${scriptPath}'] + ${JSON.stringify(args)}
