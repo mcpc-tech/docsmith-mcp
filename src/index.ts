@@ -267,15 +267,45 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         outputSchema: {
           type: "object",
           description:
-            "Returns different structures based on file type: Excel (sheet data), Word (paragraphs/tables), PDF (page content), Text (plain text), CSV (structured rows), JSON (parsed object)",
-          oneOf: [
-            ExcelReadOutputSchema,
-            WordReadOutputSchema,
-            PDFReadOutputSchema,
-            TextReadOutputSchema,
-            CSVReadOutputSchema,
-            JSONReadOutputSchema,
-          ],
+            "Document content with format-specific structure. Common fields: success (boolean), error (string, on failure).",
+          properties: {
+            // Common fields
+            success: { type: "boolean" },
+            error: { type: "string" },
+            encoding: { type: "string" },
+
+            // Excel-specific
+            sheet_name: { type: "string" },
+            sheets: { type: "array", items: { type: "string" } },
+            total_rows: { type: "number" },
+            total_cols: { type: "number" },
+            current_page: { type: ["number", "null"] },
+            total_pages: { type: "number" },
+
+            // Word-specific
+            paragraphs: { type: "array" },
+            tables: { type: "array" },
+            total_paragraphs: { type: "number" },
+            total_tables: { type: "number" },
+
+            // PDF-specific
+            current_page_group: { type: ["number", "null"] },
+            total_page_groups: { type: "number" },
+            content: {}, // PDF: array of {page_number, text, words}, Text: string
+
+            // Text/CSV-specific
+            total_lines: { type: "number" },
+            headers: { type: "array", items: { type: "string" } },
+
+            // Data field (varies by format)
+            data: {}, // Excel: array of arrays, CSV: array of objects, JSON: any
+
+            // Pagination
+            page: { type: "number" },
+            page_size: { type: ["number", "null"] },
+            has_more: { type: "boolean" },
+          },
+          additionalProperties: false,
         },
       },
       {
@@ -318,13 +348,45 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
         outputSchema: {
           type: "object",
-          description: "Returns metadata based on file type",
-          oneOf: [
-            ExcelInfoOutputSchema,
-            WordInfoOutputSchema,
-            PDFInfoOutputSchema,
-            TextInfoOutputSchema,
-          ],
+          description: "Document metadata with format-specific fields",
+          properties: {
+            success: { type: "boolean" },
+            error: { type: "string" },
+            file_size: { type: "number" },
+
+            // Excel-specific
+            sheets: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  rows: { type: "number" },
+                  cols: { type: "number" },
+                },
+              },
+            },
+
+            // Word-specific
+            paragraphs: { type: "number" },
+            tables: { type: "number" },
+
+            // PDF-specific
+            pages: { type: "number" },
+            total_words: { type: "number" },
+            metadata: { type: "object" },
+
+            // Text/CSV/JSON-specific
+            line_count: { type: "number" },
+            encoding: { type: "string" },
+            file_type: { type: "string" },
+            headers: { type: "array", items: { type: "string" } },
+            total_rows: { type: "number" },
+            total_cols: { type: "number" },
+            item_count: { type: "number" },
+            key_count: { type: "number" },
+          },
+          additionalProperties: false,
         },
       },
     ],
