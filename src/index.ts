@@ -242,6 +242,12 @@ const TextInfoOutputSchema = {
   },
 } as const;
 
+// UI Resource URIs for MCP Apps
+const EXCEL_VIEWER_URI = "ui://read-document/excel-viewer.html";
+const PDF_VIEWER_URI = "ui://read-document/pdf-viewer.html";
+const WORD_VIEWER_URI = "ui://read-document/word-viewer.html";
+const PPTX_VIEWER_URI = "ui://read-document/pptx-viewer.html";
+
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -249,7 +255,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "read_document",
         description:
-          "Read document content (Excel, Word, PowerPoint, PDF, TXT, CSV, Markdown, JSON, YAML). Supports raw full read or paginated mode.",
+          "Read document content (Excel, Word, PowerPoint, PDF, TXT, CSV, Markdown, JSON, YAML). Supports raw full read or paginated mode. Includes interactive UI for Excel and PDF.",
         inputSchema: {
           type: "object",
           properties: {
@@ -501,12 +507,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         packages: getPackages(fileType),
         filePaths: [params.file_path],
       });
+
+      // Add file_path to result for UI reference
+      const resultWithPath = { ...result, file_path: params.file_path, file_type: fileType };
+
+      // Determine appropriate UI based on file type
+      function getViewerUri(type: string): string {
+        switch (type) {
+          case "pdf": return PDF_VIEWER_URI;
+          case "word": return WORD_VIEWER_URI;
+          case "pptx": return PPTX_VIEWER_URI;
+          case "excel":
+          default: return EXCEL_VIEWER_URI;
+        }
+      }
+      const uiResourceUri = getViewerUri(fileType);
+
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify(resultWithPath, null, 2),
         }],
-        structuredContent: result,
+        structuredContent: resultWithPath,
+        // Include UI resource for MCP Apps
+        _meta: {
+          ui: {
+            resourceUri: uiResourceUri,
+          },
+        },
       };
     }
 
