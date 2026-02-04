@@ -3,18 +3,30 @@ import { App as MCPApp } from '@modelcontextprotocol/ext-apps';
 import { FileSpreadsheet, FileText, Presentation, File, Loader2, FolderOpen, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Types
+interface PageContent {
+  page?: number;
+  page_number?: number;
+  text?: string;
+  content?: string;
+  words?: number;
+}
+
 interface DocumentData {
   file_path?: string;
   file_type?: string;
   total_pages?: number;
   total_rows?: number;
+  total_cols?: number;
   word_count?: number;
   sheets?: string[];
   sheet_name?: string;
-  data?: { header?: string[]; rows?: any[][] };
+  current_page?: number | null;
+  page_size?: number | null;
+  data?: any[][];  // 2D array for Excel data (first row is header)
   header?: string[];
   rows?: any[][];
-  pages?: Array<{ page_number?: number; text?: string; content?: string }>;
+  pages?: PageContent[];
+  content?: PageContent[];  // Raw content from tool result
   paragraphs?: string[];
   tables?: Array<{ header?: string[]; rows?: any[][] }>;
   slides?: Array<{ title?: string; content?: string; notes?: string }>;
@@ -48,9 +60,21 @@ export default function App() {
     return 'excel';
   }, []);
 
-  const handleData = useCallback((newData: DocumentData) => {
-    setData(newData);
-    setFileType(newData.file_type as FileType || detectFileType(newData.file_path));
+  const handleData = useCallback((newData: any) => {
+    // Handle nested content array from tool result
+    let processedData = newData;
+    if (newData.content && Array.isArray(newData.content)) {
+      // Merge content array into data
+      processedData = {
+        ...newData,
+        pages: newData.content,
+        paragraphs: newData.content,
+        slides: newData.content,
+        data: { rows: newData.content },
+      };
+    }
+    setData(processedData);
+    setFileType(processedData.file_type as FileType || detectFileType(processedData.file_path));
     setState('ready');
   }, [detectFileType]);
 
@@ -107,9 +131,9 @@ export default function App() {
   if (state === 'error') return <ErrorState message={error} />;
 
   return (
-    <div className="h-screen flex flex-col p-4 gap-4">
+    <div className="h-full flex flex-col p-4 gap-4">
       {/* Header */}
-      <header className="bg-surface rounded-xl shadow-sm border border-border p-4 flex items-center justify-between">
+      <header className="bg-surface rounded-xl shadow-sm border border-border p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 ${config.color} rounded-lg flex items-center justify-center`}>
             <Icon className="w-5 h-5 text-white" />
@@ -127,7 +151,7 @@ export default function App() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 bg-surface rounded-xl shadow-sm border border-border flex flex-col overflow-hidden">
+      <main className="flex-1 min-h-0 bg-surface rounded-xl shadow-sm border border-border flex flex-col overflow-hidden">
         {/* Toolbar */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-3 bg-neutral-50">
           {/* Sheet Selector */}
@@ -195,7 +219,7 @@ export default function App() {
 // Sub-components
 function LoadingState() {
   return (
-    <div className="h-screen flex flex-col items-center justify-center gap-3">
+    <div className="h-full flex flex-col items-center justify-center gap-3">
       <Loader2 className="w-8 h-8 text-accent animate-spin" />
       <p className="text-sm text-muted">Loading document...</p>
     </div>
@@ -204,7 +228,7 @@ function LoadingState() {
 
 function EmptyState() {
   return (
-    <div className="h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
+    <div className="h-full flex flex-col items-center justify-center gap-4 text-center px-4">
       <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center">
         <FolderOpen className="w-8 h-8 text-muted" />
       </div>
@@ -218,7 +242,7 @@ function EmptyState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
+    <div className="h-full flex flex-col items-center justify-center gap-4 text-center px-4">
       <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center">
         <AlertCircle className="w-8 h-8 text-rose-500" />
       </div>
@@ -231,19 +255,26 @@ function ErrorState({ message }: { message: string }) {
 }
 
 function ExcelViewer({ data }: { data: DocumentData | null }) {
-  const tableData = data?.data || data;
-  const header = tableData?.header || [];
-  const rows = tableData?.rows || [];
+  // Excel data structure: data is a 2D array, first row is header
+  const rawData = data?.data;
+  
+  if (!rawData || !Array.isArray(rawData) || rawData.length === 0) {
+    return <p className="text-sm text-muted text-center py-8">No data available</p>;
+  }
 
-  if (!rows.length) return <p className="text-sm text-muted text-center py-8">No data available</p>;
+  // First row is header, rest are data rows
+  const header = rawData[0] || [];
+  const rows = rawData.slice(1);
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-auto">
       <table className="w-full text-sm">
         <thead className="bg-neutral-50 sticky top-0">
           <tr>
             {header.map((h, i) => (
-              <th key={i} className="px-4 py-2.5 text-left font-medium text-primary border-b border-border whitespace-nowrap">{h || ''}</th>
+              <th key={i} className="px-4 py-2.5 text-left font-medium text-primary border-b border-border whitespace-nowrap">
+                {h ?? ''}
+              </th>
             ))}
           </tr>
         </thead>
@@ -251,7 +282,9 @@ function ExcelViewer({ data }: { data: DocumentData | null }) {
           {rows.map((row, i) => (
             <tr key={i} className="hover:bg-neutral-50 transition-colors">
               {row.map((cell: any, j: number) => (
-                <td key={j} className="px-4 py-2 border-b border-border text-secondary">{cell ?? ''}</td>
+                <td key={j} className="px-4 py-2 border-b border-border text-secondary">
+                  {cell ?? ''}
+                </td>
               ))}
             </tr>
           ))}
@@ -262,14 +295,15 @@ function ExcelViewer({ data }: { data: DocumentData | null }) {
 }
 
 function PdfViewer({ data }: { data: DocumentData | null }) {
-  const pages = data?.pages || [];
+  // Support both 'pages' and 'content' arrays from tool result
+  const pages = data?.pages || data?.content || [];
   if (!pages.length) return <p className="text-sm text-muted text-center py-8">No pages available</p>;
 
   return (
     <div className="space-y-4">
       {pages.map((page, i) => (
         <article key={i} className="p-5 bg-neutral-50 rounded-lg border-l-4 border-accent">
-          <h3 className="text-sm font-semibold text-accent mb-3">Page {page.page_number || i + 1}</h3>
+          <h3 className="text-sm font-semibold text-accent mb-3">Page {page.page_number || page.page || i + 1}</h3>
           <p className="text-sm text-secondary whitespace-pre-wrap leading-relaxed">{page.text || page.content || ''}</p>
         </article>
       ))}
