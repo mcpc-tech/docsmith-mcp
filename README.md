@@ -11,8 +11,8 @@ Python-powered document processing MCP with MCP Apps — Process Excel, Word, PD
 - **PDF**: Read `.pdf` files with text extraction and pagination
 - **PowerPoint**: Read `.pptx` files with slide content extraction
 - **Text Files**: Read/write `.txt`, `.csv`, `.md`, `.json`, `.yaml`, `.yml` with pagination support
+- **Run Python**: Execute Python code for flexible file operations and data processing
 - **MCP App**: Beautiful React + Tailwind CSS app for viewing all document types
-- **HTTP Server**: Serve documents via HTTP/SSE with MCP integration
 - **Flexible Reading Modes**: Raw full read or paginated for large files
 - **Powered by Pyodide**: Runs in secure WebAssembly sandbox via code-runner-mcp
 
@@ -153,6 +153,50 @@ Get document metadata without reading full content.
 }
 ```
 
+### run_python
+
+Execute Python code for flexible file operations, data processing, and custom tasks. Supports any file format and Python libraries.
+
+**Parameters:**
+- `code` (string, required): Python code to execute
+- `packages` (object, optional): Package mappings (import_name -> pypi_name) for required dependencies
+- `file_paths` (array, optional): File paths that the code needs to access
+
+**Examples:**
+
+Read and process any file:
+```json
+{
+  "code": "import json\nwith open('/path/to/file.json') as f:\n    data = json.load(f)\n    result = len(data)\n    print(json.dumps({'count': result}))",
+  "file_paths": ["/path/to/file.json"]
+}
+```
+
+Batch rename files with regex:
+```json
+{
+  "code": "import os, re\nfolder = '/path/to/files'\nfor name in os.listdir(folder):\n    new_name = re.sub(r'old_', 'new_', name)\n    os.rename(os.path.join(folder, name), os.path.join(folder, new_name))\nprint(json.dumps({'success': True}))",
+  "file_paths": ["/path/to/files"]
+}
+```
+
+Process data with pandas:
+```json
+{
+  "code": "import pandas as pd\ndf = pd.read_csv('/path/to/data.csv')\nsummary = df.describe().to_dict()\nprint(json.dumps(summary))",
+  "packages": {"pandas": "pandas"},
+  "file_paths": ["/path/to/data.csv"]
+}
+```
+
+Extract archive files:
+```json
+{
+  "code": "import zipfile, os\nwith zipfile.ZipFile('/path/to/archive.zip', 'r') as z:\n    z.extractall('/path/to/output')\nfiles = os.listdir('/path/to/output')\nprint(json.dumps({'extracted_files': files}))",
+  "file_paths": ["/path/to/archive.zip", "/path/to/output"]
+}
+```
+
 ## MCP App
 
 The built-in MCP App provides a beautiful, interactive interface for viewing documents:
@@ -173,18 +217,6 @@ Environment variables for customizing behavior:
 | `DOC_RAW_FULL_READ` | Enable full raw read mode | `false` |
 | `DOC_PAGE_SIZE` | Default items per page | `100` |
 | `DOC_MAX_FILE_SIZE` | Max file size in MB | `50` |
-
-## HTTP Mode
-
-For HTTP/SSE transport, start the server:
-
-```bash
-npx docsmith-mcp http 3000
-```
-
-Endpoints:
-- `http://localhost:3000/mcp` - MCP over HTTP/SSE
-- `http://localhost:3000/health` - Health check
 
 ## Contributing
 

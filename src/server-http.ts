@@ -15,43 +15,25 @@ import {
   ReadResourceRequestSchema,
   ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import express from "express";
 import cors from "cors";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { dirname, join, resolve } from "path";
 
 import { runPythonFile } from "./code-runner.js";
 import { detectFileType, getConfig, getPackages } from "./utils.js";
+import { runPy, type RunPyOptions } from "@mcpc-tech/code-runner-mcp";
+import {
+  ReadDocumentSchema,
+  WriteDocumentSchema,
+  GetDocumentInfoSchema,
+  RunPythonSchema,
+} from "./schemas.js";
+import { HTTP_TOOLS, UNIVERSAL_VIEWER_URI } from "./tool-definitions.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Tool schemas
-const ReadDocumentSchema = z.object({
-  file_path: z.string().describe("Absolute path to the document file"),
-  file_type: z.enum(["excel", "word", "pptx", "pdf", "text"]).optional()
-    .describe("Override file type detection"),
-  mode: z.enum(["raw", "paginated"]).optional(),
-  page: z.number().optional(),
-  page_size: z.number().optional(),
-  sheet_name: z.string().optional(),
-});
-
-const WriteDocumentSchema = z.object({
-  file_path: z.string(),
-  format: z.enum(["excel", "word", "pptx", "text"]),
-  data: z.any(),
-});
-
-const GetDocumentInfoSchema = z.object({
-  file_path: z.string(),
-  file_type: z.enum(["excel", "word", "pptx", "pdf", "text"]).optional(),
-});
-
-// UI Resource URI - Universal viewer for all document types
-const UNIVERSAL_VIEWER_URI = "ui://read-document/viewer.html";
 
 // Create server
 const server = new Server(
@@ -74,78 +56,7 @@ let lastReadFileType: string | null = null;
 // List available tools with UI metadata
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [
-      {
-        name: "read_document",
-        description: "Read document content (Excel, Word, PowerPoint, PDF, TXT, CSV, Markdown, JSON, YAML). Supports raw full read or paginated mode.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            file_path: { type: "string", description: "Absolute path to the document file" },
-            file_type: { type: "string", enum: ["excel", "word", "pptx", "pdf", "text"] },
-            mode: { type: "string", enum: ["raw", "paginated"] },
-            page: { type: "number" },
-            page_size: { type: "number" },
-            sheet_name: { type: "string" },
-          },
-          required: ["file_path"],
-        },
-        outputSchema: {
-          type: "object",
-          properties: {
-            success: { type: "boolean" },
-            error: { type: "string" },
-            encoding: { type: "string" },
-            sheet_name: { type: "string" },
-            sheets: { type: "array", items: { type: "string" } },
-            total_rows: { type: "number" },
-            total_cols: { type: "number" },
-            current_page: { type: ["number", "null"] },
-            total_pages: { type: "number" },
-            paragraphs: { type: "array" },
-            tables: { type: "array" },
-            total_slides: { type: "number" },
-            slides: { type: "array" },
-            content: {},
-            data: {},
-            page: { type: "number" },
-            page_size: { type: ["number", "null"] },
-            has_more: { type: "boolean" },
-          },
-        },
-        // MCP Apps UI metadata - universal viewer for all file types
-        _meta: {
-          ui: {
-            resourceUri: UNIVERSAL_VIEWER_URI,
-          },
-        },
-      },
-      {
-        name: "write_document",
-        description: "Write document content (Excel, Word, PowerPoint, Text)",
-        inputSchema: {
-          type: "object",
-          properties: {
-            file_path: { type: "string" },
-            format: { type: "string", enum: ["excel", "word", "pptx", "text"] },
-            data: {},
-          },
-          required: ["file_path", "format", "data"],
-        },
-      },
-      {
-        name: "get_document_info",
-        description: "Get document metadata (page count, sheet count, slide count, file size, etc.)",
-        inputSchema: {
-          type: "object",
-          properties: {
-            file_path: { type: "string" },
-            file_type: { type: "string", enum: ["excel", "word", "pptx", "pdf", "text"] },
-          },
-          required: ["file_path"],
-        },
-      },
-    ],
+    tools: HTTP_TOOLS,
   };
 });
 
@@ -355,6 +266,108 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           text: JSON.stringify(result, null, 2),
         }],
         structuredContent: result,
+      };
+    }
+
+    if (name === "run_python") {
+      const params = RunPythonSchema.parse(args);
+
+      // Determine mount root from file paths - find common ancestor
+      let mountRoot = join(__dirname, "..");
+      if (params.file_paths && params.file_paths.length > 0) {
+        const { dirname, sep } = await import("path");
+        const paths = params.file_paths.map(p => dirname(resolve(p)));
+
+        // Find common ancestor
+        const findCommonAncestor = (paths: string[]): string => {
+          if (paths.length === 0) return "";
+          if (paths.length === 1) return paths[0];
+
+          const parts = paths.map(p => p.split(sep));
+          const first = parts[0];
+          let common = [];
+
+          for (let i = 0; i < first.length; i++) {
+            if (parts.every(p => p[i] === first[i])) {
+              common.push(first[i]);
+            } else {
+              break;
+            }
+          }
+
+          return common.join(sep) || sep;
+        };
+
+        mountRoot = findCommonAncestor(paths);
+      }
+
+      const runPyOptions: RunPyOptions = {
+        packages: params.packages || {},
+        nodeFSMountPoint: mountRoot,
+        nodeFSRoot: mountRoot,
+      };
+
+      const stream = await runPy(params.code, runPyOptions);
+
+      // Read the stream output
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let stdout = "";
+      let stderr = "";
+      let error = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          if (chunk.startsWith("[stderr] ")) {
+            stderr += chunk.slice(9);
+          } else if (chunk.startsWith("[err]")) {
+            error += chunk;
+          } else {
+            stdout += chunk;
+          }
+        }
+      } catch (streamError) {
+        return {
+          content: [{ type: "text", text: `Error: ${String(streamError)}` }],
+          isError: true,
+        };
+      }
+
+      // Check for errors
+      if (error) {
+        return {
+          content: [{ type: "text", text: `Error: ${error.replace(/\[err\]\[py\]\s*/g, "").trim()}` }],
+          isError: true,
+        };
+      }
+
+      // Try to parse last line as JSON result
+      let result = null;
+      const lines = stdout.trim().split("\n");
+      const lastLine = lines[lines.length - 1];
+      try {
+        result = JSON.parse(lastLine);
+      } catch {
+        // Not JSON, use full stdout
+      }
+
+      const response = {
+        success: !error,
+        result: result,
+        stdout: stdout,
+        stderr: stderr || undefined,
+      };
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        }],
+        structuredContent: response,
       };
     }
 
